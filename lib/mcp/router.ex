@@ -15,7 +15,11 @@ defmodule ArkeAi.Mcp.Router do
   post "/" do
     session_id = get_session_id(conn)
 
-    case ArkeAi.Mcp.Protocol.handle(conn.params, session_id, conn.assigns.router_opts) do
+    opts =
+      conn.assigns.router_opts
+      |> Keyword.put(:project, conn.assigns[:arke_project])
+
+    case ArkeAi.Mcp.Protocol.handle(conn.params, session_id, opts) do
       {:ok, result} -> respond(conn, result)
       {:notification, _} -> respond_notification(conn)
       {:error, code, message} -> respond_error(conn, code, message)
