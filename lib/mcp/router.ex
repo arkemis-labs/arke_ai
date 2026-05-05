@@ -1,4 +1,5 @@
 defmodule ArkeAi.Mcp.Router do
+  @moduledoc "HTTP entry point for the MCP server. Accepts JSON-RPC 2.0 over POST, enforces auth, delegates to Protocol."
   use Plug.Router, copy_opts_to_assign: :router_opts
 
   plug(Plug.Parsers,
@@ -7,6 +8,7 @@ defmodule ArkeAi.Mcp.Router do
     json_decoder: Jason
   )
 
+  plug ArkeAi.Mcp.Plugs.Auth
   plug(:match)
   plug(:dispatch)
 

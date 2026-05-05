@@ -1,4 +1,5 @@
 defmodule ArkeAi.Mcp.Protocol do
+  @moduledoc "Pure JSON-RPC 2.0 dispatch. Takes a decoded params map, returns a tagged tuple."
   @method_not_found -32601
 
   def handle(body, _session_id, opts \\ []) do

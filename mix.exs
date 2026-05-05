@@ -7,13 +7,9 @@ defmodule ArkeAi.MixProject do
       version: "0.1.0",
       elixir: "~> 1.16",
       start_permanent: Mix.env() == :prod,
-      elixirc_paths: elixirc_paths(Mix.env()),
       deps: deps()
     ]
   end
-
-  defp elixirc_paths(:dev), do: ["lib", "dev"]
-  defp elixirc_paths(_), do: ["lib"]
 
   # Run "mix help compile.app" to learn about applications.
   def application do
@@ -27,7 +23,8 @@ defmodule ArkeAi.MixProject do
     [
       {:plug, "~> 1.16", optional: true},
       {:jason, "~> 1.4", optional: true},
-      {:bandit, "~> 1.0", only: :dev}
+      {:arke, "~> 0.6.1"},
+      {:arke_auth, "~> 0.4.4"}
     ]
   end
 end
