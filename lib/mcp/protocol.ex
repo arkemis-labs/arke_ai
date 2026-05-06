@@ -26,14 +26,14 @@ defmodule ArkeAi.Mcp.Protocol do
          }}
 
       %{"method" => "tools/list", "id" => _id} ->
-        tools = ToolRegistry.list_tools(opts[:project], opts[:expose] || [])
+        tools = ToolRegistry.list_tools(opts[:project], opts[:member], opts[:auth], opts[:expose] || [])
         {:ok, %{"tools" => tools}}
 
       %{"method" => "tools/call", "id" => _id, "params" => params} ->
         name = params["name"]
         args = params["arguments"] || %{}
 
-        case ToolRegistry.call_tool(name, args, opts[:project], opts[:expose] || []) do
+        case ToolRegistry.call_tool(name, args, opts[:project], opts[:member], opts[:auth], opts[:expose] || []) do
           {:ok, result} ->
             {:ok, %{"content" => [%{"type" => "text", "text" => format(result)}]}}
 

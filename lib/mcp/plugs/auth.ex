@@ -34,7 +34,10 @@ defmodule ArkeAi.Mcp.Plugs.Auth do
 
   defp load_project_from_token(conn) do
     member = ArkeAuth.Guardian.get_member(conn)
-    assign(conn, :arke_project, member.metadata.project)
+
+    conn
+    |> assign(:arke_project, member.metadata.project)
+    |> assign(:arke_member, member)
   end
 
   defp resolve_project(conn, opts) do

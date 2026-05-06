@@ -33,35 +33,35 @@ defmodule ArkeAi.Mcp.Tools.SystemTools do
 
   # ---- list ----
 
-  def execute(:arke, :list, args, project) do
+  def execute(:arke, :list, args, %{project: project}) do
     {:ok, paginate(ArkeManager.get_all(project), args, &ArkeManager.get(&1, project))}
   end
 
-  def execute(:parameter, :list, args, project) do
+  def execute(:parameter, :list, args, %{project: project}) do
     {:ok, paginate(ParameterManager.get_all(project), args, &ParameterManager.get(&1, project))}
   end
 
-  def execute(:group, :list, args, project) do
+  def execute(:group, :list, args, %{project: project}) do
     {:ok, paginate(GroupManager.get_all(project), args, &GroupManager.get(&1, project))}
   end
 
   # ---- get ----
 
-  def execute(:arke, :get, %{"id" => id}, project) do
+  def execute(:arke, :get, %{"id" => id}, %{project: project}) do
     case ArkeManager.get(id, project) do
       nil  -> {:error, "not found"}
       unit -> {:ok, unit}
     end
   end
 
-  def execute(:parameter, :get, %{"id" => id}, project) do
+  def execute(:parameter, :get, %{"id" => id}, %{project: project}) do
     case ParameterManager.get(id, project) do
       nil  -> {:error, "not found"}
       unit -> {:ok, unit}
     end
   end
 
-  def execute(:group, :get, %{"id" => id}, project) do
+  def execute(:group, :get, %{"id" => id}, %{project: project}) do
     case GroupManager.get(id, project) do
       nil  -> {:error, "not found"}
       unit -> {:ok, unit}
@@ -70,17 +70,17 @@ defmodule ArkeAi.Mcp.Tools.SystemTools do
 
   # ---- create ----
 
-  def execute(:arke, :create, args, project) do
+  def execute(:arke, :create, args, %{project: project}) do
     arke = ArkeManager.get(:arke, :arke_system)
     QueryManager.create(project, arke, atomize_keys(args))
   end
 
-  def execute(:group, :create, args, project) do
+  def execute(:group, :create, args, %{project: project}) do
     arke = ArkeManager.get(:group, :arke_system)
     QueryManager.create(project, arke, atomize_keys(args))
   end
 
-  def execute(:parameter, {:create, type}, args, project) do
+  def execute(:parameter, {:create, type}, args, %{project: project}) do
     case ArkeManager.get(type, :arke_system) do
       nil  -> {:error, "invalid parameter type: #{type}"}
       arke -> QueryManager.create(project, arke, atomize_keys(args))
@@ -89,21 +89,21 @@ defmodule ArkeAi.Mcp.Tools.SystemTools do
 
   # ---- update ----
 
-  def execute(:arke, :update, %{"id" => id} = args, project) do
+  def execute(:arke, :update, %{"id" => id} = args, %{project: project}) do
     case ArkeManager.get(id, project) do
       nil  -> {:error, "not found"}
       unit -> QueryManager.update(unit, atomize_keys(Map.delete(args, "id")))
     end
   end
 
-  def execute(:parameter, {:update, _type}, %{"id" => id} = args, project) do
+  def execute(:parameter, {:update, _type}, %{"id" => id} = args, %{project: project}) do
     case ParameterManager.get(id, project) do
       nil  -> {:error, "not found"}
       unit -> QueryManager.update(unit, atomize_keys(Map.delete(args, "id")))
     end
   end
 
-  def execute(:group, :update, %{"id" => id} = args, project) do
+  def execute(:group, :update, %{"id" => id} = args, %{project: project}) do
     case GroupManager.get(id, project) do
       nil  -> {:error, "not found"}
       unit -> QueryManager.update(unit, atomize_keys(Map.delete(args, "id")))
@@ -112,7 +112,7 @@ defmodule ArkeAi.Mcp.Tools.SystemTools do
 
   # ---- delete ----
 
-  def execute(:arke, :delete, %{"id" => id}, project) do
+  def execute(:arke, :delete, %{"id" => id}, %{project: project}) do
     case ArkeManager.get(id, project) do
       nil ->
         {:error, "not found"}
@@ -123,7 +123,7 @@ defmodule ArkeAi.Mcp.Tools.SystemTools do
     end
   end
 
-  def execute(:parameter, :delete, %{"id" => id}, project) do
+  def execute(:parameter, :delete, %{"id" => id}, %{project: project}) do
     case ParameterManager.get(id, project) do
       nil ->
         {:error, "not found"}
@@ -134,7 +134,7 @@ defmodule ArkeAi.Mcp.Tools.SystemTools do
     end
   end
 
-  def execute(:group, :delete, %{"id" => id}, project) do
+  def execute(:group, :delete, %{"id" => id}, %{project: project}) do
     case GroupManager.get(id, project) do
       nil ->
         {:error, "not found"}
@@ -147,7 +147,7 @@ defmodule ArkeAi.Mcp.Tools.SystemTools do
 
   # ---- arke / parameter associations ----
 
-  def execute(:arke, :add_parameter, %{"arke_id" => arke_id, "parameter_id" => param_id} = args, project) do
+  def execute(:arke, :add_parameter, %{"arke_id" => arke_id, "parameter_id" => param_id} = args, %{project: project}) do
     metadata = Map.get(args, "metadata", %{})
 
     with %_{} = arke  <- ArkeManager.get(arke_id, project)       || {:error, "arke not found"},
@@ -156,7 +156,7 @@ defmodule ArkeAi.Mcp.Tools.SystemTools do
     end
   end
 
-  def execute(:arke, :remove_parameter, %{"arke_id" => arke_id, "parameter_id" => param_id}, project) do
+  def execute(:arke, :remove_parameter, %{"arke_id" => arke_id, "parameter_id" => param_id}, %{project: project}) do
     with %_{} = arke  <- ArkeManager.get(arke_id, project)       || {:error, "arke not found"},
          %_{} = param <- ParameterManager.get(param_id, project) || {:error, "parameter not found"} do
       LinkManager.delete_node(project, arke, param, "parameter")

@@ -1,16 +1,31 @@
 defmodule ArkeAi.Mcp.ToolRegistry do
   @moduledoc "Derives MCP tool definitions from Arke ETS on demand and routes calls to the right tools module."
 
+  alias ArkeAi.Mcp.Permission
   alias ArkeAi.Mcp.Tools.{ArkeTools, GroupTools, SystemTools}
 
-  def list_tools(project, config) do
-    Enum.flat_map(config, &tools_for_entry(&1, project))
+  @local_permission %{filter: nil, child_only: false, get: true, put: true, post: true, delete: true}
+
+  def list_tools(project, member, auth_mode, config) do
+    config
+    |> Enum.flat_map(&tools_for_entry(&1, project))
+    |> Enum.filter(&authorized?(&1, project, member, auth_mode, config))
   end
 
-  def call_tool(name, args, project, config) do
+  def call_tool(name, args, project, member, auth_mode, config) do
     case resolve(name, config) do
-      nil      -> {:error, "unknown tool"}
-      resolved -> dispatch(resolved, args, project)
+      nil ->
+        {:error, "unknown tool"}
+
+      {type, id, op} = resolved ->
+        case authorize(type, id, op, project, member, auth_mode) do
+          {:ok, permission} ->
+            ctx = %{project: project, member: member, permission: permission}
+            dispatch(resolved, args, ctx)
+
+          {:error, :forbidden} ->
+            {:error, "forbidden"}
+        end
     end
   end
 
@@ -48,12 +63,29 @@ defmodule ArkeAi.Mcp.ToolRegistry do
     end
   end
 
-  defp dispatch({:arke, id, op}, args, project),
-    do: ArkeTools.execute(id, op, args, project)
+  defp authorize(_type, _id, _op, _project, _member, :local), do: {:ok, @local_permission}
 
-  defp dispatch({:group, id, op}, args, project),
-    do: GroupTools.execute(id, op, args, project)
+  defp authorize(type, id, op, project, member, _auth_mode) do
+    Permission.check(permission_target(type, id, op), op, project, member)
+  end
 
-  defp dispatch({:system, target, op}, args, project),
-    do: SystemTools.execute(target, op, args, project)
+  defp authorized?(_tool, _project, _member, :local, _config), do: true
+
+  defp authorized?(tool, project, member, _auth_mode, config) do
+    case resolve(tool["name"], config) do
+      nil -> true
+      {type, id, op} ->
+        match?({:ok, _}, Permission.check(permission_target(type, id, op), op, project, member))
+    end
+  end
+
+  defp permission_target(:arke, id, _op),                    do: id
+  defp permission_target(:group, id, _op),                   do: id
+  defp permission_target(:system, _target, {:create, type}), do: type
+  defp permission_target(:system, _target, {:update, type}), do: type
+  defp permission_target(:system, target, _op),              do: target
+
+  defp dispatch({:arke, id, op}, args, ctx),       do: ArkeTools.execute(id, op, args, ctx)
+  defp dispatch({:group, id, op}, args, ctx),      do: GroupTools.execute(id, op, args, ctx)
+  defp dispatch({:system, target, op}, args, ctx), do: SystemTools.execute(target, op, args, ctx)
 end

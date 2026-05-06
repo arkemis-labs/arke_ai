@@ -8,7 +8,7 @@ defmodule ArkeAi.Mcp.Router do
     json_decoder: Jason
   )
 
-  plug ArkeAi.Mcp.Plugs.Auth
+  plug(ArkeAi.Mcp.Plugs.Auth)
   plug(:match)
   plug(:dispatch)
 
@@ -18,6 +18,7 @@ defmodule ArkeAi.Mcp.Router do
     opts =
       conn.assigns.router_opts
       |> Keyword.put(:project, conn.assigns[:arke_project])
+      |> Keyword.put(:member, conn.assigns[:arke_member])
 
     case ArkeAi.Mcp.Protocol.handle(conn.params, session_id, opts) do
       {:ok, result} -> respond(conn, result)

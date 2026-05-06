@@ -4,6 +4,7 @@ defmodule ArkeAi.Mcp.Tools.ArkeTools do
   alias Arke.Boundary.ArkeManager
   alias Arke.QueryManager
   alias ArkeAi.Mcp.Filter
+  alias ArkeAi.Mcp.Permission
   alias ArkeAi.Mcp.Schema.ParameterToJson
 
   @system_params [:id, :arke_id, :metadata, :inserted_at, :updated_at]
@@ -21,10 +22,11 @@ defmodule ArkeAi.Mcp.Tools.ArkeTools do
 
   defp tool_name(id, op), do: "#{op}_#{id}"
 
-  def execute(id, :list, args, project) do
+  def execute(id, :list, args, %{project: project, member: member, permission: perm}) do
     units =
       [project: project, arke: id]
       |> QueryManager.query()
+      |> Permission.apply_to_query(perm, member)
       |> QueryManager.offset(Map.get(args, "offset", 0))
       |> QueryManager.limit(Map.get(args, "limit", 10))
       |> QueryManager.all()
@@ -32,17 +34,18 @@ defmodule ArkeAi.Mcp.Tools.ArkeTools do
     {:ok, units}
   end
 
-  def execute(id, :get, %{"id" => unit_id}, project) do
-    case QueryManager.get_by(project: project, arke: id, id: unit_id) do
+  def execute(id, :get, %{"id" => unit_id}, ctx) do
+    case fetch_scoped(id, unit_id, ctx) do
       nil  -> {:error, "not found"}
       unit -> {:ok, unit}
     end
   end
 
-  def execute(id, :search, args, project) do
+  def execute(id, :search, args, %{project: project, member: member, permission: perm}) do
     query =
       [project: project, arke: id]
       |> QueryManager.query()
+      |> Permission.apply_to_query(perm, member)
       |> Filter.to_query(Map.get(args, "filter"), project)
       |> apply_order(Map.get(args, "order", []))
       |> QueryManager.offset(Map.get(args, "offset", 0))
@@ -51,22 +54,22 @@ defmodule ArkeAi.Mcp.Tools.ArkeTools do
     {:ok, QueryManager.all(query)}
   end
 
-  def execute(id, :create, args, project) do
+  def execute(id, :create, args, %{project: project}) do
     arke = ArkeManager.get(id, project)
     QueryManager.create(project, arke, atomize_keys(args))
   end
 
-  def execute(id, :update, %{"id" => unit_id} = args, project) do
+  def execute(id, :update, %{"id" => unit_id} = args, ctx) do
     {_, args} = Map.pop(args, "id")
 
-    case QueryManager.get_by(project: project, arke: id, id: unit_id) do
+    case fetch_scoped(id, unit_id, ctx) do
       nil  -> {:error, "not found"}
       unit -> QueryManager.update(unit, atomize_keys(args))
     end
   end
 
-  def execute(id, :delete, %{"id" => unit_id}, project) do
-    case QueryManager.get_by(project: project, arke: id, id: unit_id) do
+  def execute(id, :delete, %{"id" => unit_id}, %{project: project} = ctx) do
+    case fetch_scoped(id, unit_id, ctx) do
       nil ->
         {:error, "not found"}
 
@@ -74,6 +77,14 @@ defmodule ArkeAi.Mcp.Tools.ArkeTools do
         QueryManager.delete(project, unit)
         {:ok, %{deleted: unit_id}}
     end
+  end
+
+  defp fetch_scoped(arke_id, unit_id, %{project: project, member: member, permission: perm}) do
+    [project: project, arke: arke_id]
+    |> QueryManager.query()
+    |> Permission.apply_to_query(perm, member)
+    |> QueryManager.filter(:id, :eq, unit_id, false)
+    |> QueryManager.one()
   end
 
   defp apply_order(query, order) do

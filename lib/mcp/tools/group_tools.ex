@@ -5,6 +5,7 @@ defmodule ArkeAi.Mcp.Tools.GroupTools do
   alias Arke.LinkManager
   alias Arke.QueryManager
   alias ArkeAi.Mcp.Filter
+  alias ArkeAi.Mcp.Permission
   alias ArkeAi.Mcp.Schema.ParameterToJson
 
   @system_params [:id, :arke_id, :metadata, :inserted_at, :updated_at]
@@ -24,11 +25,12 @@ defmodule ArkeAi.Mcp.Tools.GroupTools do
   defp tool_name(id, :remove_arke), do: "remove_arke_from_#{id}"
   defp tool_name(id, op),           do: "#{op}_#{id}"
 
-  def execute(id, :list, args, project) do
+  def execute(id, :list, args, %{project: project, member: member, permission: perm}) do
     units =
       [project: project, arke: nil]
       |> QueryManager.query()
       |> QueryManager.filter(:group_id, :eq, id, false)
+      |> Permission.apply_to_query(perm, member)
       |> QueryManager.offset(Map.get(args, "offset", 0))
       |> QueryManager.limit(Map.get(args, "limit", 10))
       |> QueryManager.all()
@@ -36,11 +38,12 @@ defmodule ArkeAi.Mcp.Tools.GroupTools do
     {:ok, units}
   end
 
-  def execute(id, :get, %{"id" => unit_id}, project) do
+  def execute(id, :get, %{"id" => unit_id}, %{project: project, member: member, permission: perm}) do
     unit =
       [project: project, arke: nil]
       |> QueryManager.query()
       |> QueryManager.filter(:group_id, :eq, id, false)
+      |> Permission.apply_to_query(perm, member)
       |> QueryManager.filter(:id, :eq, unit_id, false)
       |> QueryManager.one()
 
@@ -50,11 +53,12 @@ defmodule ArkeAi.Mcp.Tools.GroupTools do
     end
   end
 
-  def execute(id, :search, args, project) do
+  def execute(id, :search, args, %{project: project, member: member, permission: perm}) do
     query =
       [project: project, arke: nil]
       |> QueryManager.query()
       |> QueryManager.filter(:group_id, :eq, id, false)
+      |> Permission.apply_to_query(perm, member)
       |> Filter.to_query(Map.get(args, "filter"), project)
       |> apply_order(Map.get(args, "order", []))
       |> QueryManager.offset(Map.get(args, "offset", 0))
@@ -63,14 +67,14 @@ defmodule ArkeAi.Mcp.Tools.GroupTools do
     {:ok, QueryManager.all(query)}
   end
 
-  def execute(id, :list_arkes, _args, project) do
+  def execute(id, :list_arkes, _args, %{project: project}) do
     case GroupManager.get(id, project) do
       nil   -> {:error, "group not found"}
       group -> {:ok, GroupManager.get_arke_list(group)}
     end
   end
 
-  def execute(id, :get_schema, _args, project) do
+  def execute(id, :get_schema, _args, %{project: project}) do
     case GroupManager.get(id, project) do
       nil ->
         {:error, "group not found"}
@@ -81,14 +85,14 @@ defmodule ArkeAi.Mcp.Tools.GroupTools do
     end
   end
 
-  def execute(id, :add_arke, %{"arke_id" => arke_id}, project) do
+  def execute(id, :add_arke, %{"arke_id" => arke_id}, %{project: project}) do
     with %_{} = group <- GroupManager.get(id, project) || {:error, "group not found"},
          %_{} = arke <- ArkeManager.get(arke_id, project) || {:error, "arke not found"} do
       LinkManager.add_node(project, group, arke, "group")
     end
   end
 
-  def execute(id, :remove_arke, %{"arke_id" => arke_id}, project) do
+  def execute(id, :remove_arke, %{"arke_id" => arke_id}, %{project: project}) do
     with %_{} = group <- GroupManager.get(id, project) || {:error, "group not found"},
          %_{} = arke <- ArkeManager.get(arke_id, project) || {:error, "arke not found"} do
       LinkManager.delete_node(project, group, arke, "group")
