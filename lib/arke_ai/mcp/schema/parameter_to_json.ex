@@ -1,4 +1,6 @@
 defmodule ArkeAi.Mcp.Schema.ParameterToJson do
+  @moduledoc "Converts an Arke parameter unit to a JSON Schema fragment (type + constraints + default)."
+
   alias Arke.Core.Unit
 
   def convert(%Unit{arke_id: :string} = param) do

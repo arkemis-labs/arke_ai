@@ -1,8 +1,5 @@
 defmodule ArkeAi.Mcp.Permission do
-  @moduledoc """
-  Thin wrapper over `ArkeAuth.Utils.Permission`: cascade public -> member,
-  op -> flag check, filter parsing, and query scoping.
-  """
+  @moduledoc "Thin wrapper over `ArkeAuth.Utils.Permission`."
 
   alias ArkeAuth.Utils.Permission, as: ArkeAuthPermission
   alias ArkeAi.Mcp.PermissionFilter

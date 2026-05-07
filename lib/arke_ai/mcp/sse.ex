@@ -1,8 +1,5 @@
 defmodule ArkeAi.Mcp.SSE do
-  @moduledoc """
-  SSE transport: opens a chunked response, subscribes to notifications, writes
-  events.
-  """
+  @moduledoc "SSE transport: opens a chunked response, subscribes to notifications, writes events."
 
   import Plug.Conn
   alias ArkeAi.Mcp.Notifications

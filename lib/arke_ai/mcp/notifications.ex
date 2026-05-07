@@ -1,7 +1,5 @@
 defmodule ArkeAi.Mcp.Notifications do
-  @moduledoc """
-  Distributed pub/sub for MCP notifications via :pg.
-  """
+  @moduledoc "Distributed pub/sub for MCP notifications via `:pg`."
 
   @scope :arke_ai_mcp_pubsub
 
