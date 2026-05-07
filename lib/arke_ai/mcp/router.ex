@@ -27,6 +27,21 @@ defmodule ArkeAi.Mcp.Router do
     end
   end
 
+  get "/" do
+    accept_header = Plug.Conn.get_req_header(conn, "accept")
+
+    if Enum.any?(accept_header, &String.contains?(&1, "text/event-stream")) do
+      opts =
+        conn.assigns.router_opts
+        |> Keyword.put(:project, conn.assigns[:arke_project])
+        |> Keyword.put(:member, conn.assigns[:arke_member])
+
+      ArkeAi.Mcp.SSE.serve(conn, opts)
+    else
+      send_resp(conn, 400, "GET requires Accept: text/event-stream")
+    end
+  end
+
   match _ do
     send_resp(conn, 405, "Method not allowed")
   end

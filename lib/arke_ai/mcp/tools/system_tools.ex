@@ -4,6 +4,7 @@ defmodule ArkeAi.Mcp.Tools.SystemTools do
   alias Arke.Boundary.{ArkeManager, GroupManager, ParameterManager}
   alias Arke.LinkManager
   alias Arke.QueryManager
+  alias ArkeAi.Mcp.Notifications
   alias ArkeAi.Mcp.Schema.ParameterToJson
 
   @system_params [:id, :arke_id, :metadata, :inserted_at, :updated_at, :type]
@@ -72,18 +73,26 @@ defmodule ArkeAi.Mcp.Tools.SystemTools do
 
   def execute(:arke, :create, args, %{project: project}) do
     arke = ArkeManager.get(:arke, :arke_system)
+
     QueryManager.create(project, arke, atomize_keys(args))
+    |> notify_on_success(project)
   end
 
   def execute(:group, :create, args, %{project: project}) do
     arke = ArkeManager.get(:group, :arke_system)
+
     QueryManager.create(project, arke, atomize_keys(args))
+    |> notify_on_success(project)
   end
 
   def execute(:parameter, {:create, type}, args, %{project: project}) do
     case ArkeManager.get(type, :arke_system) do
-      nil  -> {:error, "invalid parameter type: #{type}"}
-      arke -> QueryManager.create(project, arke, atomize_keys(args))
+      nil ->
+        {:error, "invalid parameter type: #{type}"}
+
+      arke ->
+        QueryManager.create(project, arke, atomize_keys(args))
+        |> notify_on_success(project)
     end
   end
 
@@ -91,22 +100,34 @@ defmodule ArkeAi.Mcp.Tools.SystemTools do
 
   def execute(:arke, :update, %{"id" => id} = args, %{project: project}) do
     case ArkeManager.get(id, project) do
-      nil  -> {:error, "not found"}
-      unit -> QueryManager.update(unit, atomize_keys(Map.delete(args, "id")))
+      nil ->
+        {:error, "not found"}
+
+      unit ->
+        QueryManager.update(unit, atomize_keys(Map.delete(args, "id")))
+        |> notify_on_success(project)
     end
   end
 
   def execute(:parameter, {:update, _type}, %{"id" => id} = args, %{project: project}) do
     case ParameterManager.get(id, project) do
-      nil  -> {:error, "not found"}
-      unit -> QueryManager.update(unit, atomize_keys(Map.delete(args, "id")))
+      nil ->
+        {:error, "not found"}
+
+      unit ->
+        QueryManager.update(unit, atomize_keys(Map.delete(args, "id")))
+        |> notify_on_success(project)
     end
   end
 
   def execute(:group, :update, %{"id" => id} = args, %{project: project}) do
     case GroupManager.get(id, project) do
-      nil  -> {:error, "not found"}
-      unit -> QueryManager.update(unit, atomize_keys(Map.delete(args, "id")))
+      nil ->
+        {:error, "not found"}
+
+      unit ->
+        QueryManager.update(unit, atomize_keys(Map.delete(args, "id")))
+        |> notify_on_success(project)
     end
   end
 
@@ -119,6 +140,7 @@ defmodule ArkeAi.Mcp.Tools.SystemTools do
 
       unit ->
         QueryManager.delete(project, unit)
+        Notifications.tools_list_changed(project)
         {:ok, %{deleted: to_string(id)}}
     end
   end
@@ -130,6 +152,7 @@ defmodule ArkeAi.Mcp.Tools.SystemTools do
 
       unit ->
         QueryManager.delete(project, unit)
+        Notifications.tools_list_changed(project)
         {:ok, %{deleted: to_string(id)}}
     end
   end
@@ -141,6 +164,7 @@ defmodule ArkeAi.Mcp.Tools.SystemTools do
 
       unit ->
         QueryManager.delete(project, unit)
+        Notifications.tools_list_changed(project)
         {:ok, %{deleted: to_string(id)}}
     end
   end
@@ -153,6 +177,7 @@ defmodule ArkeAi.Mcp.Tools.SystemTools do
     with %_{} = arke  <- ArkeManager.get(arke_id, project)       || {:error, "arke not found"},
          %_{} = param <- ParameterManager.get(param_id, project) || {:error, "parameter not found"} do
       LinkManager.add_node(project, arke, param, "parameter", metadata)
+      |> notify_on_success(project)
     end
   end
 
@@ -160,10 +185,18 @@ defmodule ArkeAi.Mcp.Tools.SystemTools do
     with %_{} = arke  <- ArkeManager.get(arke_id, project)       || {:error, "arke not found"},
          %_{} = param <- ParameterManager.get(param_id, project) || {:error, "parameter not found"} do
       LinkManager.delete_node(project, arke, param, "parameter")
+      |> notify_on_success(project)
     end
   end
 
   # ---- helpers ----
+
+  defp notify_on_success({:ok, _} = result, project) do
+    Notifications.tools_list_changed(project)
+    result
+  end
+
+  defp notify_on_success(other, _project), do: other
 
   defp paginate(keys, args, fetch) do
     keys

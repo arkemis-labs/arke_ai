@@ -17,7 +17,7 @@ defmodule ArkeAi.Mcp.Protocol do
       %{"method" => "initialize", "id" => _id} ->
         {:ok,
          %{
-           "capabilities" => %{"tools" => %{}},
+           "capabilities" => %{"tools" => %{"listChanged" => true}},
            "protocolVersion" => opts[:protocol_version] || "2025-03-26",
            "serverInfo" => %{
              "name" => opts[:name] || "arke_ai",
