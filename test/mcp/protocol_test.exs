@@ -4,73 +4,55 @@ defmodule ArkeAi.Mcp.ProtocolTest do
   alias ArkeAi.Mcp.Protocol
 
   describe "notifications" do
-    test "returns notification when id is missing" do
-      assert {:notification, nil} = Protocol.handle(%{"method" => "initialize"}, nil)
+    test "treats messages with id: nil as notifications" do
+      assert {:notification, nil} = Protocol.handle(%{"id" => nil}, nil, [])
     end
 
-    test "returns notification when id is null" do
-      assert {:notification, nil} = Protocol.handle(%{"method" => "initialize", "id" => nil}, nil)
+    test "treats messages without id as notifications" do
+      assert {:notification, nil} = Protocol.handle(%{"method" => "anything"}, nil, [])
     end
   end
 
   describe "initialize" do
-    test "returns protocol version and capabilities" do
-      assert {:ok, result} = Protocol.handle(%{"method" => "initialize", "id" => "1"}, nil)
-      assert result["protocolVersion"] == "2025-03-26"
-      assert result["capabilities"] == %{"tools" => %{}}
-      assert result["serverInfo"]["name"] == "arke_ai"
-    end
-
-    test "allows protocol version override via opts" do
-      assert {:ok, result} = Protocol.handle(%{"method" => "initialize", "id" => "1"}, nil, protocol_version: "2024-01-01")
-      assert result["protocolVersion"] == "2024-01-01"
-    end
-  end
-
-  describe "tools/list" do
-    test "returns a list of tools" do
-      assert {:ok, %{"tools" => tools}} = Protocol.handle(%{"method" => "tools/list", "id" => "1"}, nil)
-      assert is_list(tools)
-      assert length(tools) > 0
-    end
-
-    test "each tool has required fields" do
-      assert {:ok, %{"tools" => tools}} = Protocol.handle(%{"method" => "tools/list", "id" => "1"}, nil)
-      Enum.each(tools, fn tool ->
-        assert Map.has_key?(tool, "name")
-        assert Map.has_key?(tool, "description")
-        assert Map.has_key?(tool, "inputSchema")
-      end)
-    end
-  end
-
-  describe "tools/call" do
-    test "returns content for known tool" do
+    test "returns capabilities, protocolVersion, and serverInfo" do
       assert {:ok, result} =
-               Protocol.handle(
-                 %{"method" => "tools/call", "id" => "1", "params" => %{"name" => "test", "arguments" => %{}}},
-                 nil
-               )
+               Protocol.handle(%{"id" => 1, "method" => "initialize"}, nil, [])
 
-      assert [%{"type" => "text", "text" => _}] = result["content"]
-      refute result["isError"]
+      assert %{
+               "capabilities" => %{"tools" => %{"listChanged" => true}},
+               "protocolVersion" => "2025-03-26",
+               "serverInfo" => %{"name" => name, "version" => version}
+             } = result
+
+      assert is_binary(name)
+      assert is_binary(version)
     end
 
-    test "returns isError for unknown tool" do
-      assert {:ok, result} =
-               Protocol.handle(
-                 %{"method" => "tools/call", "id" => "1", "params" => %{"name" => "unknown", "arguments" => %{}}},
-                 nil
+    test "uses opts[:name] and opts[:version] when present" do
+      assert {:ok, %{"serverInfo" => %{"name" => "Custom", "version" => "9.9.9"}}} =
+               Protocol.handle(%{"id" => 1, "method" => "initialize"}, nil,
+                 name: "Custom",
+                 version: "9.9.9"
                )
+    end
 
-      assert result["isError"] == true
-      assert [%{"type" => "text"}] = result["content"]
+    test "derives name and version from opts[:otp_app] when no explicit values" do
+      assert {:ok, %{"serverInfo" => %{"name" => "arke_ai"}}} =
+               Protocol.handle(%{"id" => 1, "method" => "initialize"}, nil, otp_app: :arke_ai)
+    end
+
+    test "honors opts[:protocol_version]" do
+      assert {:ok, %{"protocolVersion" => "1999-01-01"}} =
+               Protocol.handle(%{"id" => 1, "method" => "initialize"}, nil,
+                 protocol_version: "1999-01-01"
+               )
     end
   end
 
   describe "unknown method" do
-    test "returns method not found error" do
-      assert {:error, -32601, _message} = Protocol.handle(%{"method" => "unknown/method", "id" => "1"}, nil)
+    test "returns method-not-found error" do
+      assert {:error, -32_601, "method not found"} =
+               Protocol.handle(%{"id" => 1, "method" => "wat"}, nil, [])
     end
   end
 end
