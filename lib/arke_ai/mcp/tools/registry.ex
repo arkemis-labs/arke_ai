@@ -1,8 +1,8 @@
-defmodule ArkeAi.Mcp.ToolRegistry do
+defmodule ArkeAi.Mcp.Tools.Registry do
   @moduledoc "Derives MCP tool definitions from Arke ETS on demand and routes calls to the right tools module."
 
   alias ArkeAi.Mcp.Permission
-  alias ArkeAi.Mcp.Tools.{ArkeTools, GroupTools, SystemTools}
+  alias ArkeAi.Mcp.Tools
 
   @local_permission %{filter: nil, child_only: false, get: true, put: true, post: true, delete: true}
 
@@ -30,34 +30,34 @@ defmodule ArkeAi.Mcp.ToolRegistry do
   end
 
   defp tools_for_entry({:arke, id, ops}, project),
-    do: ArkeTools.build(id, ops, project)
+    do: Tools.Arke.build(id, ops, project)
 
   defp tools_for_entry({:group, id, ops}, project),
-    do: GroupTools.build(id, ops, project)
+    do: Tools.Group.build(id, ops, project)
 
   defp tools_for_entry({:system, target, ops}, _project),
-    do: SystemTools.build(target, ops)
+    do: Tools.System.build(target, ops)
 
   defp resolve(name, config) do
     Enum.find_value(config, &resolve_entry(&1, name))
   end
 
   defp resolve_entry({:arke, id, ops}, name) do
-    case ArkeTools.resolve(id, ops, name) do
+    case Tools.Arke.resolve(id, ops, name) do
       nil -> nil
       op  -> {:arke, id, op}
     end
   end
 
   defp resolve_entry({:group, id, ops}, name) do
-    case GroupTools.resolve(id, ops, name) do
+    case Tools.Group.resolve(id, ops, name) do
       nil -> nil
       op  -> {:group, id, op}
     end
   end
 
   defp resolve_entry({:system, target, ops}, name) do
-    case SystemTools.resolve(target, ops, name) do
+    case Tools.System.resolve(target, ops, name) do
       nil -> nil
       op  -> {:system, target, op}
     end
@@ -85,7 +85,7 @@ defmodule ArkeAi.Mcp.ToolRegistry do
   defp permission_target(:system, _target, {:update, type}), do: type
   defp permission_target(:system, target, _op),              do: target
 
-  defp dispatch({:arke, id, op}, args, ctx),       do: ArkeTools.execute(id, op, args, ctx)
-  defp dispatch({:group, id, op}, args, ctx),      do: GroupTools.execute(id, op, args, ctx)
-  defp dispatch({:system, target, op}, args, ctx), do: SystemTools.execute(target, op, args, ctx)
+  defp dispatch({:arke, id, op}, args, ctx),       do: Tools.Arke.execute(id, op, args, ctx)
+  defp dispatch({:group, id, op}, args, ctx),      do: Tools.Group.execute(id, op, args, ctx)
+  defp dispatch({:system, target, op}, args, ctx), do: Tools.System.execute(target, op, args, ctx)
 end

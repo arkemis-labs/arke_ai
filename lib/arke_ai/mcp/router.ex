@@ -13,12 +13,10 @@ defmodule ArkeAi.Mcp.Router do
   plug(:dispatch)
 
   post "/" do
-    session_id = get_session_id(conn)
+    session_id = ensure_session_id(conn)
+    opts = request_opts(conn)
 
-    opts =
-      conn.assigns.router_opts
-      |> Keyword.put(:project, conn.assigns[:arke_project])
-      |> Keyword.put(:member, conn.assigns[:arke_member])
+    conn = put_resp_header(conn, "mcp-session-id", session_id)
 
     case ArkeAi.Mcp.Protocol.handle(conn.params, session_id, opts) do
       {:ok, result} -> respond(conn, result)
@@ -28,15 +26,10 @@ defmodule ArkeAi.Mcp.Router do
   end
 
   get "/" do
-    accept_header = Plug.Conn.get_req_header(conn, "accept")
+    accept_header = get_req_header(conn, "accept")
 
     if Enum.any?(accept_header, &String.contains?(&1, "text/event-stream")) do
-      opts =
-        conn.assigns.router_opts
-        |> Keyword.put(:project, conn.assigns[:arke_project])
-        |> Keyword.put(:member, conn.assigns[:arke_member])
-
-      ArkeAi.Mcp.SSE.serve(conn, opts)
+      ArkeAi.Mcp.SSE.serve(conn, request_opts(conn))
     else
       send_resp(conn, 400, "GET requires Accept: text/event-stream")
     end
@@ -46,11 +39,21 @@ defmodule ArkeAi.Mcp.Router do
     send_resp(conn, 405, "Method not allowed")
   end
 
-  defp get_session_id(conn) do
+  defp request_opts(conn) do
+    conn.assigns.router_opts
+    |> Keyword.put(:project, conn.assigns[:arke_project])
+    |> Keyword.put(:member, conn.assigns[:arke_member])
+  end
+
+  defp ensure_session_id(conn) do
     case get_req_header(conn, "mcp-session-id") do
       [session_id | _] -> session_id
-      [] -> nil
+      [] -> generate_session_id()
     end
+  end
+
+  defp generate_session_id do
+    :crypto.strong_rand_bytes(16) |> Base.url_encode64(padding: false)
   end
 
   defp respond(conn, result) do

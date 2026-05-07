@@ -1,4 +1,4 @@
-defmodule ArkeAi.Mcp.Tools.SystemTools do
+defmodule ArkeAi.Mcp.Tools.System do
   @moduledoc "Builds and executes tools for `:system` expose entries (arke / parameter / group definition CRUD + associations)."
 
   alias Arke.Boundary.{ArkeManager, GroupManager, ParameterManager}

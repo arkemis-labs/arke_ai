@@ -1,7 +1,7 @@
-defmodule ArkeAi.Mcp.FilterTest do
+defmodule ArkeAi.Mcp.Schema.SearchFilterTest do
   use ExUnit.Case, async: true
 
-  alias ArkeAi.Mcp.Filter
+  alias ArkeAi.Mcp.Schema.SearchFilter, as: Filter
 
   describe "schema_defs/0" do
     test "exposes filterNode, filterLeaf, filterGroup" do

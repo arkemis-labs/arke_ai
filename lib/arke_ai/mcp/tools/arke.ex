@@ -1,11 +1,10 @@
-defmodule ArkeAi.Mcp.Tools.ArkeTools do
+defmodule ArkeAi.Mcp.Tools.Arke do
   @moduledoc "Builds and executes tools for `:arke`."
 
   alias Arke.Boundary.ArkeManager
   alias Arke.QueryManager
-  alias ArkeAi.Mcp.Filter
   alias ArkeAi.Mcp.Permission
-  alias ArkeAi.Mcp.Schema.ParameterToJson
+  alias ArkeAi.Mcp.Schema.{ParameterToJson, SearchFilter}
 
   @system_params [:id, :arke_id, :metadata, :inserted_at, :updated_at]
 
@@ -46,7 +45,7 @@ defmodule ArkeAi.Mcp.Tools.ArkeTools do
       [project: project, arke: id]
       |> QueryManager.query()
       |> Permission.apply_to_query(perm, member)
-      |> Filter.to_query(Map.get(args, "filter"), project)
+      |> SearchFilter.to_query(Map.get(args, "filter"), project)
       |> apply_order(Map.get(args, "order", []))
       |> QueryManager.offset(Map.get(args, "offset", 0))
       |> QueryManager.limit(Map.get(args, "limit", 10))
@@ -141,7 +140,7 @@ defmodule ArkeAi.Mcp.Tools.ArkeTools do
           "offset" => %{"type" => "integer", "default" => 0},
           "limit"  => %{"type" => "integer", "default" => 10}
         },
-        "$defs" => Filter.schema_defs()
+        "$defs" => SearchFilter.schema_defs()
       }
     }
   end

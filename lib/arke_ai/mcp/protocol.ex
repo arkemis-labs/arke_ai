@@ -4,7 +4,7 @@ defmodule ArkeAi.Mcp.Protocol do
 
   alias Arke.Core.Unit
   alias Arke.StructManager
-  alias ArkeAi.Mcp.ToolRegistry
+  alias ArkeAi.Mcp.Tools.Registry
 
   def handle(body, _session_id, opts \\ []) do
     case body do
@@ -20,20 +20,20 @@ defmodule ArkeAi.Mcp.Protocol do
            "capabilities" => %{"tools" => %{"listChanged" => true}},
            "protocolVersion" => opts[:protocol_version] || "2025-03-26",
            "serverInfo" => %{
-             "name" => opts[:name] || "arke_ai",
-             "version" => opts[:version] || "0.1.0"
+             "name" => server_name(opts),
+             "version" => server_version(opts)
            }
          }}
 
       %{"method" => "tools/list", "id" => _id} ->
-        tools = ToolRegistry.list_tools(opts[:project], opts[:member], opts[:auth], opts[:expose] || [])
+        tools = Registry.list_tools(opts[:project], opts[:member], opts[:auth], opts[:expose] || [])
         {:ok, %{"tools" => tools}}
 
       %{"method" => "tools/call", "id" => _id, "params" => params} ->
         name = params["name"]
         args = params["arguments"] || %{}
 
-        case ToolRegistry.call_tool(name, args, opts[:project], opts[:member], opts[:auth], opts[:expose] || []) do
+        case Registry.call_tool(name, args, opts[:project], opts[:member], opts[:auth], opts[:expose] || []) do
           {:ok, result} ->
             {:ok, %{"content" => [%{"type" => "text", "text" => format(result)}]}}
 
@@ -47,6 +47,29 @@ defmodule ArkeAi.Mcp.Protocol do
 
       _ ->
         {:error, @method_not_found, "method not found"}
+    end
+  end
+
+  defp server_name(opts) do
+    cond do
+      opts[:name]    -> to_string(opts[:name])
+      opts[:otp_app] -> to_string(opts[:otp_app])
+      true           -> "arke_ai"
+    end
+  end
+
+  defp server_version(opts) do
+    cond do
+      opts[:version] -> to_string(opts[:version])
+      opts[:otp_app] -> app_version(opts[:otp_app]) || "0.1.0"
+      true           -> "0.1.0"
+    end
+  end
+
+  defp app_version(otp_app) do
+    case :application.get_key(otp_app, :vsn) do
+      {:ok, vsn} -> List.to_string(vsn)
+      _          -> nil
     end
   end
 

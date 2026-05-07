@@ -1,4 +1,4 @@
-defmodule ArkeAi.Mcp.Filter do
+defmodule ArkeAi.Mcp.Schema.SearchFilter do
   @moduledoc "Recursive filter conversion: JSON filter tree → Arke query."
 
   alias Arke.QueryManager
