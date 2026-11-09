@@ -111,6 +111,13 @@ defmodule ArkeAi.Mcp.Schema.ParameterToJsonTest do
     end
   end
 
+  describe "untyped" do
+    test "dynamic and binary accept any value" do
+      assert ParameterToJson.convert(param(:dynamic)) == %{}
+      assert ParameterToJson.convert(param(:binary)) == %{}
+    end
+  end
+
   describe "multiple" do
     test "string with enum becomes an array of enum items" do
       values = [%{label: "Weather", value: "weather"}, %{label: "Sum", value: "sum"}]

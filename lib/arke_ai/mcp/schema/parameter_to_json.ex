@@ -57,6 +57,9 @@ defmodule ArkeAi.Mcp.Schema.ParameterToJson do
 
   defp base(%Unit{arke_id: :link}), do: %{"type" => "string"}
 
+  # :dynamic, :binary and custom types: one unknown type must not crash tools/list
+  defp base(%Unit{}), do: %{}
+
   defp put_min_length(schema, nil), do: schema
   defp put_min_length(schema, val), do: Map.put(schema, "minLength", val)
 
