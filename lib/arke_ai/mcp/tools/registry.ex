@@ -1,19 +1,30 @@
 defmodule ArkeAi.Mcp.Tools.Registry do
   @moduledoc "Derives MCP tool definitions from Arke ETS on demand and routes calls to the right tools module."
 
+  alias Arke.Boundary.{ArkeManager, GroupManager}
   alias ArkeAi.Mcp.Permission
   alias ArkeAi.Mcp.Tools
 
   @local_permission %{filter: nil, child_only: false, get: true, put: true, post: true, delete: true}
 
+  @arke_ops [:list, :get, :search, :create, :update, :delete]
+  @group_ops [:list, :get, :search, :list_arkes, :get_schema, :add_arke, :remove_arke]
+  @system_ops [
+    arke: [:list, :get, :create, :update, :delete, :add_parameter, :remove_parameter],
+    parameter: [:list, :get, :create, :update, :delete],
+    group: [:list, :get, :create, :update, :delete]
+  ]
+
   def list_tools(project, member, auth_mode, config) do
+    config = expand(config, project)
+
     config
     |> Enum.flat_map(&tools_for_entry(&1, project))
     |> Enum.filter(&authorized?(&1, project, member, auth_mode, config))
   end
 
   def call_tool(name, args, project, member, auth_mode, config) do
-    case resolve(name, config) do
+    case resolve(name, expand(config, project)) do
       nil ->
         {:error, "unknown tool"}
 
@@ -28,6 +39,16 @@ defmodule ArkeAi.Mcp.Tools.Registry do
         end
     end
   end
+
+  # Re-read from ETS per request so arkes/groups created at runtime show up immediately.
+  defp expand(:unsafe_all, project) do
+    system = for {target, ops} <- @system_ops, do: {:system, target, ops}
+    arkes = for {id, _} <- ArkeManager.get_all(project), do: {:arke, id, @arke_ops}
+    groups = for {id, _} <- GroupManager.get_all(project), do: {:group, id, @group_ops}
+    system ++ arkes ++ groups
+  end
+
+  defp expand(config, _project), do: config
 
   defp tools_for_entry({:arke, id, ops}, project),
     do: Tools.Arke.build(id, ops, project)

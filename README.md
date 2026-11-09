@@ -39,6 +39,9 @@ forward "/mcp", ArkeAi.Mcp.Router,
 
 Connect any MCP client to `http://localhost:4000/mcp`.
 
+For local development, `expose: :unsafe_all` exposes every op for every arke and group in the
+project, plus all system ops (only allowed with `auth: :local`).
+
 ## Auth modes
 
 - `:local` — IP-restricted to localhost. Trusted dev environment, no permission checks.
