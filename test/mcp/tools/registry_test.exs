@@ -40,4 +40,44 @@ defmodule ArkeAi.Mcp.Tools.RegistryTest do
       assert System.resolve(:parameter, [:update], "update_link_parameter") == {:update, :link}
     end
   end
+
+  describe "expose: :unsafe_all" do
+    alias ArkeAi.Mcp.Tools.Registry
+    # `Arke` is aliased to ArkeAi.Mcp.Tools.Arke above
+    alias Elixir.Arke.Boundary.ArkeManager
+    alias Elixir.Arke.Core.Unit
+
+    test "lists system tools plus every arke registered in the project at call time" do
+      project = :unsafe_all_test
+      names = fn ->
+        Registry.list_tools(project, nil, :local, :unsafe_all) |> Enum.map(& &1["name"])
+      end
+
+      assert "list_arkes" in names.()
+      assert "create_string_parameter" in names.()
+      assert "add_parameter_to_arke" in names.()
+      refute "list_runtime_car" in names.()
+
+      ArkeManager.create(
+        %Unit{
+          id: :runtime_car,
+          arke_id: :arke,
+          data: %{label: "Car", parameters: []},
+          metadata: %{}
+        },
+        project
+      )
+
+      for op <- ~w(list get search create update delete),
+          do: assert("#{op}_runtime_car" in names.())
+    end
+
+    test "router refuses unsafe_all outside auth: :local" do
+      assert ArkeAi.Mcp.Router.init(auth: :local, expose: :unsafe_all)
+
+      assert_raise ArgumentError, fn ->
+        ArkeAi.Mcp.Router.init(auth: :bearer, expose: :unsafe_all)
+      end
+    end
+  end
 end

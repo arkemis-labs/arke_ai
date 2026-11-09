@@ -110,4 +110,38 @@ defmodule ArkeAi.Mcp.Schema.ParameterToJsonTest do
       assert %{"type" => "array"} = ParameterToJson.convert(param(:list))
     end
   end
+
+  describe "multiple" do
+    test "string with enum becomes an array of enum items" do
+      values = [%{label: "Weather", value: "weather"}, %{label: "Sum", value: "sum"}]
+
+      assert ParameterToJson.convert(param(:string, %{multiple: true, values: values})) ==
+               %{
+                 "type" => "array",
+                 "items" => %{"type" => "string", "enum" => ["weather", "sum"]}
+               }
+    end
+
+    test "default moves from the item to the array" do
+      result =
+        ParameterToJson.convert(param(:integer, %{multiple: true, default_integer: [1, 2]}))
+
+      assert result == %{
+               "type" => "array",
+               "items" => %{"type" => "integer"},
+               "default" => [1, 2]
+             }
+    end
+
+    test "link is a string, or an array of strings when multiple" do
+      assert ParameterToJson.convert(param(:link)) == %{"type" => "string"}
+
+      assert ParameterToJson.convert(param(:link, %{multiple: true})) ==
+               %{"type" => "array", "items" => %{"type" => "string"}}
+    end
+
+    test "multiple: false keeps the scalar schema" do
+      assert ParameterToJson.convert(param(:string, %{multiple: false})) == %{"type" => "string"}
+    end
+  end
 end

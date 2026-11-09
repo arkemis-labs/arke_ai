@@ -60,6 +60,10 @@ defmodule ArkeAi do
   System ops default to deny — only `super_admin` members can access them unless permission link
   units are explicitly seeded for other roles.
 
+  Pass `expose: :unsafe_all` instead of a list to expose every op above for every arke and group
+  of the project, re-read on each request so arkes created at runtime appear immediately. Only
+  allowed with `auth: :local`; the router raises otherwise.
+
   ### `otp_app` — optional
 
   Used to derive `serverInfo.name` and `serverInfo.version` returned during `initialize`. If absent,

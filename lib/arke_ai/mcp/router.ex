@@ -2,6 +2,14 @@ defmodule ArkeAi.Mcp.Router do
   @moduledoc "HTTP entry point for the MCP server. Accepts JSON-RPC 2.0 over POST, enforces auth, delegates to Protocol."
   use Plug.Router, copy_opts_to_assign: :router_opts
 
+  @impl true
+  def init(opts) do
+    if opts[:expose] == :unsafe_all and opts[:auth] != :local,
+      do: raise(ArgumentError, "expose: :unsafe_all is only allowed with auth: :local")
+
+    opts
+  end
+
   plug(Plug.Parsers,
     parsers: [:json],
     pass: ["application/json"],
